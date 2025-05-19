@@ -3,6 +3,7 @@ package helpers
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func CheckUserType(c *gin.Context, role string) (err error) {
@@ -27,4 +28,13 @@ func UserRoleType(c *gin.Context, userId string) (err error) {
 	}
 	err = CheckUserType(c, userRole)
 	return err
+}
+
+func HashPassword(password string) (string, error) {
+	hashPasswordUser, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+
+	return string(hashPasswordUser), nil
 }
