@@ -3,12 +3,15 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ZaharBorisenko/JWT-Auth-Services/helpers"
 	"github.com/ZaharBorisenko/JWT-Auth-Services/models"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -126,12 +129,81 @@ func Signup(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-func Login() gin.HandlerFunc {
+func Login(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 1. Подготовка контекста и структур
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 100*time.Second)
+		defer cancel()
 
+		var inputUser models.User
+		var foundUser models.User
+
+		// 2. Парсинг входящих данных
+		if err := c.BindJSON(&inputUser); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+			return
+		}
+
+		// 3. Поиск пользователя в БД
+		if err := db.WithContext(ctx).
+			Where("email = ?", strings.ToLower(inputUser.Email)).
+			First(&foundUser).Error; err != nil {
+
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+			}
+			return
+		}
+
+		// 4. Проверка пароля
+		passwordIsValid, msg := VerifyPassword(inputUser.Password, foundUser.Password)
+		if !passwordIsValid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": msg})
+			return
+		}
+
+		// 5. Генерация токенов
+		token, refreshToken, err := helpers.GenerateAllTokens(
+			foundUser.Email,
+			foundUser.FirstName,
+			foundUser.LastName,
+			foundUser.Role,
+			foundUser.UserId,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+			return
+		}
+
+		// 6. Обновление токенов в БД
+		if err := db.WithContext(ctx).
+			Model(&foundUser).
+			Updates(map[string]interface{}{
+				"token":         token,
+				"refresh_token": refreshToken,
+			}).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update tokens"})
+			return
+		}
+
+		// 7. Успешный ответ
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "User login successfully",
+			"user":    foundUser,
+		})
 	}
 }
 
-func VerifyPassword() {
+func VerifyPassword(userPassword, hashedPassword string) (bool, string) {
+	fmt.Printf("Comparing:\nUserPassword: '%s' (% x)\nHashedPassword: '%s'\n",
+		userPassword, []byte(userPassword), hashedPassword)
 
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(userPassword))
+	if err != nil {
+		fmt.Printf("Comparison failed: %v\n", err)
+		return false, "Invalid email or password"
+	}
+	return true, ""
 }

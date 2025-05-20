@@ -9,7 +9,7 @@ type User struct {
 	ID           uuid.UUID  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
 	FirstName    string     `gorm:"not null;type:varchar(100)" json:"first_name"`
 	LastName     string     `gorm:"not null;type:varchar(100)" json:"last_name"`
-	Password     string     `gorm:"not null;type:varchar(100)" json:"-"`
+	Password     string     `gorm:"not null;type:varchar(100)" json:"password"`
 	Email        string     `gorm:"unique;not null;type:varchar(100)" json:"email"`
 	Phone        *string    `gorm:"unique;type:varchar(16);default:null" json:"phone"`
 	BirthDay     *time.Time `json:"birth_day"`
@@ -18,7 +18,7 @@ type User struct {
 	Token        *string    `json:"token"`
 	Role         string     `gorm:"not null;type:varchar(16);default:USER" json:"role"`
 	RefreshToken *string    `gorm:"type:text" json:"refresh_token"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `gorm:"autoCreateTime" json:"updated_at"`
-	UserId       string     `gorm:"autoUpdateTime" json:"user_id"`
+	CreatedAt    time.Time  `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt    time.Time  `gorm:"autoUpdateTime" json:"updated_at"`
+	UserId       string     `json:"user_id"`
 }

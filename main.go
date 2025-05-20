@@ -35,8 +35,8 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Logger())
 
-	routes.AuthRoutes(router)
-	routes.UserRoutes(router)
+	routes.AuthRoutes(router, db)
+	routes.UserRoutes(router, db)
 
 	router.GET("/api-1", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "success api-1"})

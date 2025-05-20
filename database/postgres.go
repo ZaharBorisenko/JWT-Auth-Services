@@ -23,5 +23,12 @@ func NewConnection(config *Config) (*gorm.DB, error) {
 		config.Dbname,
 	)
 
-	return gorm.Open(postgres.Open(psqlInfo), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{})
+
+	if err != nil {
+		return db, err
+	}
+
+	return db, nil
+
 }
